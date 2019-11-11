@@ -261,10 +261,10 @@ func (b *Work) runWorkers() {
 	// Ignore the case where b.N % b.C != 0.
 	if b.RequstGroups != nil {
 		for i, _ := range b.RequstGroups {
-			go func() {
-				b.runWorker(client, b.N/b.C, b.RequstGroups[i])
+			go func(i int) {
+				b.runWorker(client, b.N, b.RequstGroups[i])
 				wg.Done()
-			}()
+			}(i)
 		}
 	} else {
 		for i := 0; i < b.C; i++ {

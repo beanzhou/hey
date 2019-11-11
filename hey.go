@@ -150,6 +150,10 @@ func main() {
 		}
 	}
 
+	if len(reqGroups) != 0 {
+		conc = len(reqGroups)
+	}
+
 	w := &requester.Work{
 		Request:            req,
 		RequestBody:        bodyAll,
