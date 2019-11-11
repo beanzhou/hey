@@ -99,12 +99,17 @@ Options:
 
   -host	HTTP Host header.
 
+  -ip  		server ip.
+  -roomid  	live room id
+  -users  	users user ',' sep
+
   -disable-compression  Disable compression.
   -disable-keepalive    Disable keep-alive, prevents re-use of TCP
                         connections between different HTTP requests.
   -disable-redirects    Disable following of HTTP redirects
   -cpus                 Number of used cpu cores.
                         (default for current machine is %d cores)
+
 `
 
 func main() {
