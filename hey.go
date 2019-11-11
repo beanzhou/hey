@@ -117,6 +117,10 @@ func main() {
 		fmt.Fprint(os.Stderr, fmt.Sprintf(usage, runtime.NumCPU()))
 	}
 
+	req, bodyAll := genRequst()
+
+	reqGroups := genLiveReqGroup()
+
 	num := *n
 	conc := *c
 	q := *q
@@ -145,10 +149,6 @@ func main() {
 			usageAndExit(err.Error())
 		}
 	}
-
-	req, bodyAll := genRequst()
-
-	reqGroups := genLiveReqGroup()
 
 	w := &requester.Work{
 		Request:            req,

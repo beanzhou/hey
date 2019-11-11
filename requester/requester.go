@@ -18,7 +18,6 @@ package requester
 import (
 	"bytes"
 	"crypto/tls"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -263,7 +262,6 @@ func (b *Work) runWorkers() {
 	if b.RequstGroups != nil {
 		for i, _ := range b.RequstGroups {
 			go func() {
-				fmt.Printf("%v", b.RequstGroups[i])
 				b.runWorker(client, b.N/b.C, b.RequstGroups[i])
 				wg.Done()
 			}()
