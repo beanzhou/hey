@@ -51,6 +51,8 @@ type Work struct {
 	// Request is the request to be made.
 	Request *http.Request
 
+	RequstGroups []RequestGroup
+
 	RequestBody []byte
 
 	// N is the total number of requests to make.
@@ -94,6 +96,16 @@ type Work struct {
 	start    time.Duration
 
 	report *report
+}
+
+type Request struct {
+	Tag         string
+	Request     *http.Request
+	RequestBody []byte
+}
+
+type RequestGroup struct {
+	List []Request
 }
 
 func (b *Work) writer() io.Writer {
@@ -140,13 +152,13 @@ func (b *Work) Finish() {
 	b.report.finalize(total)
 }
 
-func (b *Work) makeRequest(c *http.Client) {
+func (b *Work) makeRequest(c *http.Client, request *http.Request, reqBody []byte) {
 	s := now()
 	var size int64
 	var code int
 	var dnsStart, connStart, resStart, reqStart, delayStart time.Duration
 	var dnsDuration, connDuration, resDuration, reqDuration, delayDuration time.Duration
-	req := cloneRequest(b.Request, b.RequestBody)
+	req := cloneRequest(request, reqBody)
 	trace := &httptrace.ClientTrace{
 		DNSStart: func(info httptrace.DNSStartInfo) {
 			dnsStart = now()
@@ -197,7 +209,7 @@ func (b *Work) makeRequest(c *http.Client) {
 	}
 }
 
-func (b *Work) runWorker(client *http.Client, n int) {
+func (b *Work) runWorker(client *http.Client, n int, group RequestGroup) {
 	var throttle <-chan time.Time
 	if b.QPS > 0 {
 		throttle = time.Tick(time.Duration(1e6/(b.QPS)) * time.Microsecond)
@@ -217,7 +229,10 @@ func (b *Work) runWorker(client *http.Client, n int) {
 			if b.QPS > 0 {
 				<-throttle
 			}
-			b.makeRequest(client)
+			for _, x := range group.List {
+				b.makeRequest(client, x.Request, x.RequestBody)
+			}
+
 		}
 	}
 }
@@ -244,12 +259,22 @@ func (b *Work) runWorkers() {
 	client := &http.Client{Transport: tr, Timeout: time.Duration(b.Timeout) * time.Second}
 
 	// Ignore the case where b.N % b.C != 0.
-	for i := 0; i < b.C; i++ {
-		go func() {
-			b.runWorker(client, b.N/b.C)
-			wg.Done()
-		}()
+	if b.RequstGroups != nil {
+		for i, _ := range b.RequstGroups {
+			go func() {
+				b.runWorker(client, b.N/b.C, b.RequstGroups[i])
+				wg.Done()
+			}()
+		}
+	} else {
+		for i := 0; i < b.C; i++ {
+			go func() {
+				b.runWorker(client, b.N/b.C, RequestGroup{List: []Request{{"", b.Request, b.RequestBody}}})
+				wg.Done()
+			}()
+		}
 	}
+
 	wg.Wait()
 }
 

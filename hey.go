@@ -39,6 +39,8 @@ const (
 )
 
 var (
+	M = flag.String("M", "", "")
+
 	m           = flag.String("m", "GET", "")
 	headers     = flag.String("h", "", "")
 	body        = flag.String("d", "", "")
@@ -47,6 +49,10 @@ var (
 	contentType = flag.String("T", "text/html", "")
 	authHeader  = flag.String("a", "", "")
 	hostHeader  = flag.String("host", "", "")
+
+	roomid = flag.String("room", "", "")
+	users  = flag.String("users", "", "")
+	ip     = flag.String("ip", "", "")
 
 	output = flag.String("o", "", "")
 
@@ -106,15 +112,6 @@ func main() {
 		fmt.Fprint(os.Stderr, fmt.Sprintf(usage, runtime.NumCPU()))
 	}
 
-	var hs headerSlice
-	flag.Var(&hs, "H", "")
-
-	flag.Parse()
-	if flag.NArg() < 1 {
-		usageAndExit("")
-	}
-
-	runtime.GOMAXPROCS(*cpus)
 	num := *n
 	conc := *c
 	q := *q
@@ -134,6 +131,111 @@ func main() {
 			usageAndExit("-n cannot be less than -c.")
 		}
 	}
+
+	var proxyURL *gourl.URL
+	if *proxyAddr != "" {
+		var err error
+		proxyURL, err = gourl.Parse(*proxyAddr)
+		if err != nil {
+			usageAndExit(err.Error())
+		}
+	}
+
+	req, bodyAll := genRequst()
+
+	reqGroups := genLiveReqGroup()
+
+	w := &requester.Work{
+		Request:            req,
+		RequestBody:        bodyAll,
+		RequstGroups:       reqGroups,
+		N:                  num,
+		C:                  conc,
+		QPS:                q,
+		Timeout:            *t,
+		DisableCompression: *disableCompression,
+		DisableKeepAlives:  *disableKeepAlives,
+		DisableRedirects:   *disableRedirects,
+		H2:                 *h2,
+		ProxyAddr:          proxyURL,
+		Output:             *output,
+	}
+	w.Init()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		w.Stop()
+	}()
+	if dur > 0 {
+		go func() {
+			time.Sleep(dur)
+			w.Stop()
+		}()
+	}
+	w.Run()
+}
+
+func genLiveReqGroup() []requester.RequestGroup {
+	if *M != "" {
+		return nil
+	}
+	if len(*roomid) == 0 || len(*users) == 0 || len(*ip) == 0 {
+		usageAndExit("error params")
+		return nil
+	}
+
+	room := *roomid
+	uids := *users
+	ipStr := *ip
+
+	userIds := strings.Split(uids, ",")
+
+	list := make([]requester.RequestGroup, 0)
+
+	for _, x := range userIds {
+		header := make(http.Header)
+		header.Set("Content-Type", *contentType)
+		header.Set("X-Putong-User-Id", x)
+
+		url := fmt.Sprintf("http://%s/v2/rooms/%s/members/%s", ipStr, room, x)
+		req1, err := http.NewRequest(http.MethodPut, url, nil)
+		if err != nil {
+			usageAndExit(err.Error())
+		}
+
+		req2, err := http.NewRequest(http.MethodDelete, url, nil)
+		if err != nil {
+			usageAndExit(err.Error())
+		}
+
+		group := requester.RequestGroup{List: []requester.Request{
+			requester.Request{"", req1, nil},
+			requester.Request{"", req2, nil},
+		}}
+
+		list = append(list, group)
+	}
+
+	return list
+
+}
+
+func genRequst() (*http.Request, []byte) {
+
+	if *M != "" {
+		return nil, nil
+	}
+	var hs headerSlice
+	flag.Var(&hs, "H", "")
+
+	flag.Parse()
+	if flag.NArg() < 1 {
+		usageAndExit("")
+	}
+
+	runtime.GOMAXPROCS(*cpus)
 
 	url := flag.Args()[0]
 	method := strings.ToUpper(*m)
@@ -180,15 +282,6 @@ func main() {
 		bodyAll = slurp
 	}
 
-	var proxyURL *gourl.URL
-	if *proxyAddr != "" {
-		var err error
-		proxyURL, err = gourl.Parse(*proxyAddr)
-		if err != nil {
-			usageAndExit(err.Error())
-		}
-	}
-
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		usageAndExit(err.Error())
@@ -212,35 +305,7 @@ func main() {
 	header.Set("User-Agent", ua)
 	req.Header = header
 
-	w := &requester.Work{
-		Request:            req,
-		RequestBody:        bodyAll,
-		N:                  num,
-		C:                  conc,
-		QPS:                q,
-		Timeout:            *t,
-		DisableCompression: *disableCompression,
-		DisableKeepAlives:  *disableKeepAlives,
-		DisableRedirects:   *disableRedirects,
-		H2:                 *h2,
-		ProxyAddr:          proxyURL,
-		Output:             *output,
-	}
-	w.Init()
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		<-c
-		w.Stop()
-	}()
-	if dur > 0 {
-		go func() {
-			time.Sleep(dur)
-			w.Stop()
-		}()
-	}
-	w.Run()
+	return req, bodyAll
 }
 
 func errAndExit(msg string) {
