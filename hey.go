@@ -183,7 +183,11 @@ func main() {
 }
 
 func genLiveReqGroup() []requester.RequestGroup {
-	if *M != "" {
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	if *M == "" {
 		return nil
 	}
 	if len(*roomid) == 0 || len(*users) == 0 || len(*ip) == 0 {
@@ -228,14 +232,14 @@ func genLiveReqGroup() []requester.RequestGroup {
 }
 
 func genRequst() (*http.Request, []byte) {
+	var hs headerSlice
+	flag.Var(&hs, "H", "")
+	flag.Parse()
 
 	if *M != "" {
 		return nil, nil
 	}
-	var hs headerSlice
-	flag.Var(&hs, "H", "")
 
-	flag.Parse()
 	if flag.NArg() < 1 {
 		usageAndExit("")
 	}

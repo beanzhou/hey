@@ -18,6 +18,7 @@ package requester
 import (
 	"bytes"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -244,7 +245,7 @@ func (b *Work) runWorkers() {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,
-			ServerName:         b.Request.Host,
+			//ServerName:         b.Request.Host,
 		},
 		MaxIdleConnsPerHost: min(b.C, maxIdleConn),
 		DisableCompression:  b.DisableCompression,
@@ -262,6 +263,7 @@ func (b *Work) runWorkers() {
 	if b.RequstGroups != nil {
 		for i, _ := range b.RequstGroups {
 			go func() {
+				fmt.Printf("%v", b.RequstGroups[i])
 				b.runWorker(client, b.N/b.C, b.RequstGroups[i])
 				wg.Done()
 			}()
