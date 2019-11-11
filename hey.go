@@ -100,7 +100,7 @@ Options:
   -host	HTTP Host header.
 
   -ip  		server ip.
-  -roomid  	live room id
+  -room  	live room id
   -users  	users user ',' sep
 
   -disable-compression  Disable compression.
