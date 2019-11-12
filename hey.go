@@ -213,19 +213,22 @@ func genLiveReqGroup() []requester.RequestGroup {
 		header.Set("X-Putong-User-Id", x)
 
 		url := fmt.Sprintf("http://%s/v2/rooms/%s/members/%s", ipStr, room, x)
+		fmt.Println(url)
 		req1, err := http.NewRequest(http.MethodPut, url, nil)
 		if err != nil {
 			usageAndExit(err.Error())
 		}
+		req1.Header = header
 
 		req2, err := http.NewRequest(http.MethodDelete, url, nil)
 		if err != nil {
 			usageAndExit(err.Error())
 		}
+		req2.Header = header
 
 		group := requester.RequestGroup{List: []requester.Request{
-			requester.Request{"", req1, nil},
-			requester.Request{"", req2, nil},
+			requester.Request{"enter", req1, nil},
+			requester.Request{"leave", req2, nil},
 		}}
 
 		list = append(list, group)
