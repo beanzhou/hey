@@ -98,10 +98,13 @@ type Work struct {
 	report *report
 }
 
+type GenBody func() []byte
+
 type Request struct {
 	Tag         string
 	Request     *http.Request
 	RequestBody []byte
+	GenBody     GenBody
 }
 
 type RequestGroup struct {
@@ -230,7 +233,11 @@ func (b *Work) runWorker(client *http.Client, n int, group RequestGroup) {
 				<-throttle
 			}
 			for _, x := range group.List {
-				b.makeRequest(client, x.Request, x.RequestBody)
+				body := x.RequestBody
+				if x.GenBody != nil {
+					body = x.GenBody()
+				}
+				b.makeRequest(client, x.Request, body)
 			}
 
 		}
@@ -269,7 +276,7 @@ func (b *Work) runWorkers() {
 	} else {
 		for i := 0; i < b.C; i++ {
 			go func() {
-				b.runWorker(client, b.N/b.C, RequestGroup{List: []Request{{"", b.Request, b.RequestBody}}})
+				b.runWorker(client, b.N/b.C, RequestGroup{List: []Request{{"", b.Request, b.RequestBody, nil}}})
 				wg.Done()
 			}()
 		}

@@ -16,6 +16,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -191,7 +192,7 @@ func genLiveReqGroup() []requester.RequestGroup {
 		flag.Parse()
 	}
 
-	if *M == "" {
+	if *M != "live" {
 		return nil
 	}
 	if len(*roomid) == 0 || len(*users) == 0 || len(*ip) == 0 {
@@ -227,15 +228,75 @@ func genLiveReqGroup() []requester.RequestGroup {
 		req2.Header = header
 
 		group := requester.RequestGroup{List: []requester.Request{
-			requester.Request{"enter", req1, nil},
-			requester.Request{"leave", req2, nil},
+			requester.Request{"enter", req1, nil, nil},
+			requester.Request{"leave", req2, nil, nil},
 		}}
 
 		list = append(list, group)
 	}
 
 	return list
+}
 
+type GiftRequest struct {
+	scenario   string
+	originalId string
+	roomId     string
+	liveId     string
+	giftInfo   []GiftInfo
+}
+
+type GiftInfo struct {
+	giftType string
+	num      int
+}
+
+func genGiftReqGroup() []requester.RequestGroup {
+
+	if *M != "gift" {
+		return nil
+	}
+
+	if len(*users) == 0 || flag.NArg() < 1 {
+		usageAndExit("error params")
+		return nil
+	}
+
+	userIds := strings.Split(*users, ",")
+	url := flag.Args()[0]
+	conc := *c
+
+	list := make([]requester.RequestGroup, 0)
+	for i := 0; i < conc; i++ {
+		index := i % len(userIds)
+		header := make(http.Header)
+		header.Set("Content-Type", *contentType)
+		header.Set("X-Putong-User-Id", userIds[index])
+
+		req, err := http.NewRequest(http.MethodPost, url, nil)
+		if err != nil {
+			usageAndExit(err.Error())
+		}
+		group := requester.RequestGroup{List: []requester.Request{
+			requester.Request{"enter", req, nil, func() []byte {
+				data := GiftRequest{
+					scenario:   "live",
+					originalId: fmt.Sprintf("%d_%d", i, time.Now().UnixNano()),
+					roomId:     "1",
+					liveId:     "3",
+					giftInfo:   []GiftInfo{{giftType: "heartbeatLive", num: 1}},
+				}
+				body, err := json.Marshal(data)
+				if err != nil {
+					return nil
+				}
+				return body
+			}},
+		}}
+		list = append(list, group)
+	}
+
+	return list
 }
 
 func genRequst() (*http.Request, []byte) {
