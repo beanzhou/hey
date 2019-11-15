@@ -294,11 +294,11 @@ func genGiftReqGroup() []requester.RequestGroup {
 				}
 				data.OriginalId = fmt.Sprintf("%d_%d", i, time.Now().UnixNano())
 
-				body, err := json.Marshal(data)
+				b, err := json.Marshal(data)
 				if err != nil {
 					return nil
 				}
-				return body
+				return b
 			}},
 		}}
 		list = append(list, group)
