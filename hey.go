@@ -285,13 +285,15 @@ func genGiftReqGroup() []requester.RequestGroup {
 		req.Header = header
 		group := requester.RequestGroup{List: []requester.Request{
 			requester.Request{"enter", req, nil, func() []byte {
-				data := GiftRequest{
-					Scenario:   "live",
-					OriginalId: fmt.Sprintf("%d_%d", i, time.Now().UnixNano()),
-					RoomId:     "1",
-					LiveId:     "3",
-					GiftInfo:   []GiftInfo{{GiftType: "heartbeatLive", Num: 1}},
+
+				var data GiftRequest
+
+				err := json.Unmarshal([]byte(*body), &data)
+				if err != nil {
+					return nil
 				}
+				data.OriginalId = fmt.Sprintf("%d_%d", i, time.Now().UnixNano())
+
 				body, err := json.Marshal(data)
 				if err != nil {
 					return nil
