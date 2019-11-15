@@ -120,7 +120,12 @@ func main() {
 
 	req, bodyAll := genRequst()
 
-	reqGroups := genLiveReqGroup()
+	var reqGroups []requester.RequestGroup
+	if *M == "live" {
+		reqGroups = genLiveReqGroup()
+	} else if *M == "gift" {
+		reqGroups = genGiftReqGroup()
+	}
 
 	num := *n
 	conc := *c
