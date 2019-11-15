@@ -244,16 +244,16 @@ func genLiveReqGroup() []requester.RequestGroup {
 }
 
 type GiftRequest struct {
-	scenario   string
-	originalId string
-	roomId     string
-	liveId     string
-	giftInfo   []GiftInfo
+	Scenario   string     `json:"scenario"`
+	OriginalId string     `json:"originalId"`
+	RoomId     string     `json:"roomId"`
+	LiveId     string     `json:"liveId"`
+	GiftInfo   []GiftInfo `json:"giftInfo"`
 }
 
 type GiftInfo struct {
-	giftType string
-	num      int
+	GiftType string `json:"giftType"`
+	Num      int    `json:"num"`
 }
 
 func genGiftReqGroup() []requester.RequestGroup {
@@ -282,14 +282,15 @@ func genGiftReqGroup() []requester.RequestGroup {
 		if err != nil {
 			usageAndExit(err.Error())
 		}
+		req.Header = header
 		group := requester.RequestGroup{List: []requester.Request{
 			requester.Request{"enter", req, nil, func() []byte {
 				data := GiftRequest{
-					scenario:   "live",
-					originalId: fmt.Sprintf("%d_%d", i, time.Now().UnixNano()),
-					roomId:     "1",
-					liveId:     "3",
-					giftInfo:   []GiftInfo{{giftType: "heartbeatLive", num: 1}},
+					Scenario:   "live",
+					OriginalId: fmt.Sprintf("%d_%d", i, time.Now().UnixNano()),
+					RoomId:     "1",
+					LiveId:     "3",
+					GiftInfo:   []GiftInfo{{GiftType: "heartbeatLive", Num: 1}},
 				}
 				body, err := json.Marshal(data)
 				if err != nil {
